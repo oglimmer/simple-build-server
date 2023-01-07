@@ -1,7 +1,14 @@
 FROM httpd
 
 RUN apt-get update && \
-    apt-get -y install cron git build-essential python3 cmake pip && pip install conan && \
+    apt-get -y install cron && \
+    apt-get clean autoclean && \
+    apt-get autoremove --yes && \
+    rm -rf /var/lib/{apt,dpkg,cache,log}/
+
+# Remove this as this is for demonstration purposes only
+RUN apt-get update && \
+    apt-get -y install git build-essential python3 cmake pip && pip install conan && \
     apt-get clean autoclean && \
     apt-get autoremove --yes && \
     rm -rf /var/lib/{apt,dpkg,cache,log}/
