@@ -1,0 +1,94 @@
+#!/bin/bash
+
+. /etc/redeploy.conf
+
+set -f
+
+echo "Content-type: text/html; charset=utf-8"
+echo ""
+
+function printSystem() {
+	local SYSTEM=$1
+	local RETRIGGER_PASSWORD=$2
+cat << EOF
+  <div class='row mb-1'>
+      <article class='blog-post'>
+          <h2 class='blog-post-title'>${SYSTEM}</h2>
+EOF
+if [ ! -f "/var/lib/redeploy/lastdeploy-${SYSTEM}" ]; then
+	echo "<div class='badge bg-info'>never run</div>"
+else
+	. "/var/lib/redeploy/lastdeploy-${SYSTEM}"
+	echo "<div class='blog-post-meta'>Build done from <span class='badge bg-info text-dark'>${START_TIME:-no time yet}</span> to <span class='badge bg-info text-dark'>${END_DATE:-still running}</span>"
+  if [ -n "$GIT_REPO_URL" ] && [ -n "$LAST_HASH" ]; then
+    echo " on soruce <a href='${GIT_REPO_URL}/commit/${LAST_HASH}'>#${LAST_HASH}</a>"
+  elif [ -n "$GIT_REPO_URL" ]; then
+    echo " <a href='${GIT_REPO_URL}'>from source repository</a>"
+  elif [ -n "$LAST_HASH" ]; then
+    echo " on source #${LAST_HASH}"
+  fi
+  echo "</div>"
+
+	if [ -z "${STATUS:-}" ]; then
+		echo "<div class=\"badge bg-secondary\">Build running...</div>"
+	elif [ "$STATUS" = "0" ]; then
+		echo "<div class=\"badge bg-success\">Build successed.</div>"
+	else
+		echo "<div class=\"alert alert-danger\" role=\"alert\">Build failed with status ${STATUS:-running}.</div>"
+	fi
+	
+	if [ -z "${STATUS_TEST:-}" ]; then
+		echo "<div class=\"badge bg-secondary\">Tests running...</div>"
+  elif [ "$STATUS_TEST" = "no-test-defined" ]; then
+		echo ""
+	elif [ "$STATUS_TEST" = "0" ]; then
+    echo "<div class=\"badge bg-success\">Tests successed.</div>"
+  else
+    echo "<div class=\"alert alert-danger\" role=\"alert\">Tests failed with status ${STATUS_TEST:-running}.</div>"
+  fi
+	echo "<div><a href='buildlog?type=${SYSTEM}'>Build log</a></div>"
+fi
+if [ -f /var/lib/redeploy/schedule-"${SYSTEM}" ]; then
+  echo "<div>Rebuild scheduled.</div>"
+else
+  echo "<div><a target='_blank' href='/cgi-bin/redeploy/exec?authorization=${RETRIGGER_PASSWORD}&type=${SYSTEM}'>Trigger Rebuild</a></div>"
+fi
+cat << EOF
+    </article>
+  </div>
+EOF
+}
+
+DATE_TIME=$(date)
+cat << EOF
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <style>
+    	div {
+	   margin: 0px 4px 4px 0px;
+	}
+    </style>
+</head>
+<body>
+  <main class='container'>
+    <div class="p-4 p-md-5 mb-4 text-white rounded bg-dark">
+      <div class="col-md-6 px-0">
+        <h1 class="display-4 fst-italic">Builds</h1>
+        ${DATE_TIME}
+      </div>
+    </div>
+EOF
+for SYSTEM in "${!SYSTEM_PASSWORDS[@]}"; do
+	printSystem "$SYSTEM" "${SYSTEM_PASSWORDS[$SYSTEM]}"
+done
+cat << EOF
+    <hr />
+    <div><a href='buildlog'>Cron log</a></div>
+  </main>
+</body>
+</html>
+EOF
+

@@ -1,0 +1,32 @@
+#!/bin/bash
+
+set -f
+
+. /etc/redeploy.conf
+
+saveIFS=$IFS
+IFS='=&'
+parm=($QUERY_STRING)
+declare -A PARAMS
+for ((i=0; i<${#parm[@]}; i+=2))
+do
+	PARAMS[${parm[i]}]=$(echo "${parm[i+1]}" | grep -o "[a-zA-Z0-9_-]*" | head -1)
+done
+IFS=$saveIFS
+
+EXPECTED_PASSWORD="${SYSTEM_PASSWORDS[${PARAMS[type]}]}"
+PROVIDED_PASSWORD="${PARAMS[authorization]}"
+
+if [[ -z "${EXPECTED_PASSWORD}" ]] || [[ "$PROVIDED_PASSWORD" != "${EXPECTED_PASSWORD}" ]]; then
+  echo "Status: 401 Unauthorized";
+  echo
+  echo "401 Unauthorized"
+  exit 1
+fi
+
+echo "Content-type: text/plain; charset=utf-8"
+echo
+
+date > /var/lib/redeploy/schedule-"${PARAMS[type]}"
+
+echo "Rebuild for ${PARAMS[type]} scheduled. Stand by."
