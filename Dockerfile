@@ -31,6 +31,8 @@ COPY ./opt/ /opt/
 
 COPY start_all.sh /
 
-RUN mkdir -p /var/lib/redeploy && chown www-data:www-data /var/lib/redeploy
+RUN mkdir -p /var/lib/redeploy && chown www-data:www-data /var/lib/redeploy && \
+    touch /var/log/redeploy.log && \
+    chmod 755 /etc/cron.d/redeploy
 
 CMD ["/start_all.sh"]

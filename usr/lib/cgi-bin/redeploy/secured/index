@@ -21,9 +21,9 @@ else
 	. "/var/lib/redeploy/lastdeploy-${SYSTEM}"
 	echo "<div class='blog-post-meta'>Build done from <span class='badge bg-info text-dark'>${START_TIME:-no time yet}</span> to <span class='badge bg-info text-dark'>${END_DATE:-still running}</span>"
   if [ -n "$GIT_REPO_URL" ] && [ -n "$LAST_HASH" ]; then
-    echo " on soruce <a href='${GIT_REPO_URL}/commit/${LAST_HASH}'>#${LAST_HASH}</a>"
+    echo " on source <a href='${GIT_REPO_URL}/commit/${LAST_HASH}'>#${LAST_HASH}</a>"
   elif [ -n "$GIT_REPO_URL" ]; then
-    echo " <a href='${GIT_REPO_URL}'>from source repository</a>"
+    echo " <a href='${GIT_REPO_URL}'>on source</a>"
   elif [ -n "$LAST_HASH" ]; then
     echo " on source #${LAST_HASH}"
   fi
