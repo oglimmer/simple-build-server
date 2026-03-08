@@ -2,13 +2,22 @@
 
 set -eu
 
+LOCK_FILE="/var/lib/redeploy/engine.lock"
+
+# Prevent concurrent runs via flock
+exec 200>"$LOCK_FILE"
+if ! flock -n 200; then
+  echo "$(date +"%Y-%m-%dT%H:%M:%S%z") Another instance is already running, exiting."
+  exit 0
+fi
+
 . /etc/redeploy.conf
 
 for BUILD_NAME in "${!SYSTEM_PASSWORDS[@]}"
 do
   if [ -f "/var/lib/redeploy/schedule-$BUILD_NAME" ]; then
     echo "$(date +"%Y-%m-%dT%H:%M:%S%z") Found /var/lib/redeploy/schedule-$BUILD_NAME $(cat "/var/lib/redeploy/schedule-$BUILD_NAME")"
-    rm /var/lib/redeploy/schedule-$BUILD_NAME
+    rm "/var/lib/redeploy/schedule-$BUILD_NAME"
 
     if [ -f "/var/lib/redeploy/running-$BUILD_NAME" ]; then
       echo "$(date +"%Y-%m-%dT%H:%M:%S%z") Found /var/lib/redeploy/running-$BUILD_NAME sending SIGKILL to PID $(cat "/var/lib/redeploy/running-$BUILD_NAME")"
@@ -17,9 +26,9 @@ do
       set -e
     fi
     START_TIME=$(date)
-	  START_TIME_MILLIS=$(date +%s)
+    START_TIME_MILLIS=$(date +%s)
     cd "/opt/$BUILD_NAME"
-	      
+
     if [ -f "./get-git-hash.sh" ]; then
       LAST_HASH=$(./get-git-hash.sh)
     else
@@ -30,8 +39,8 @@ do
     else
       GIT_REPO_URL=""
     fi
-    RUN_LOG_FILE=/var/log/redeploy-build-$BUILD_NAME-$START_TIME_MILLIS.log
-    
+    RUN_LOG_FILE="/var/log/redeploy-build-$BUILD_NAME-$START_TIME_MILLIS.log"
+
     {
       echo "START_TIME=\"$START_TIME\""
       echo "RUN_LOG_FILE=$RUN_LOG_FILE"
@@ -49,7 +58,7 @@ do
     echo "$(date +"%Y-%m-%dT%H:%M:%S%z") Sub-shell started with PID $PID logging into $RUN_LOG_FILE"
 
     set +e
-    wait $PID 
+    wait "$PID"
     STATUS=$?
     set -e
     echo "STATUS=$STATUS" >> "/var/lib/redeploy/lastdeploy-$BUILD_NAME"
@@ -63,7 +72,7 @@ do
       echo "$(date +"%Y-%m-%dT%H:%M:%S%z") Sub-shell started with PID $PID logging into $RUN_LOG_FILE"
 
       set +e
-      wait $PID
+      wait "$PID"
       STATUS_TEST=$?
       set -e
       echo "STATUS_TEST=$STATUS_TEST" >> "/var/lib/redeploy/lastdeploy-$BUILD_NAME"

@@ -2,6 +2,8 @@
 
 set -f
 
+. /etc/redeploy.conf
+
 saveIFS=$IFS
 IFS='=&'
 parm=($QUERY_STRING)
@@ -12,11 +14,31 @@ do
 done
 IFS=$saveIFS
 
-if [[ -n "${PARAMS[type]}" ]]; then
-  . "/var/lib/redeploy/lastdeploy-${PARAMS[type]}"
+TYPE="${PARAMS[type]:-}"
+
+if [[ -n "$TYPE" ]]; then
+  # Validate TYPE is a known system (prevents path traversal)
+  if [[ ! -v "SYSTEM_PASSWORDS[$TYPE]" ]]; then
+    echo "Status: 400 Bad Request"
+    echo
+    echo "400 Bad Request: unknown type"
+    exit 1
+  fi
+  . "/var/lib/redeploy/lastdeploy-$TYPE"
 else
   RUN_LOG_FILE=/var/log/redeploy.log
 fi
+
+# Verify log file path is under /var/log/
+case "$(realpath "$RUN_LOG_FILE" 2>/dev/null)" in
+  /var/log/*) ;;
+  *)
+    echo "Status: 400 Bad Request"
+    echo
+    echo "400 Bad Request: invalid log file"
+    exit 1
+    ;;
+esac
 
 echo "Content-type: text/html; charset=utf-8"
 echo

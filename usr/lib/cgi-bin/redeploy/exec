@@ -14,11 +14,21 @@ do
 done
 IFS=$saveIFS
 
-EXPECTED_PASSWORD="${SYSTEM_PASSWORDS[${PARAMS[type]}]}"
+TYPE="${PARAMS[type]}"
+
+# Validate TYPE is a known system (prevents path traversal / injection)
+if [[ -z "$TYPE" ]] || [[ ! -v "SYSTEM_PASSWORDS[$TYPE]" ]]; then
+  echo "Status: 400 Bad Request"
+  echo
+  echo "400 Bad Request: unknown type"
+  exit 1
+fi
+
+EXPECTED_PASSWORD="${SYSTEM_PASSWORDS[$TYPE]}"
 PROVIDED_PASSWORD="${PARAMS[authorization]}"
 
 if [[ -z "${EXPECTED_PASSWORD}" ]] || [[ "$PROVIDED_PASSWORD" != "${EXPECTED_PASSWORD}" ]]; then
-  echo "Status: 401 Unauthorized";
+  echo "Status: 401 Unauthorized"
   echo
   echo "401 Unauthorized"
   exit 1
@@ -27,6 +37,6 @@ fi
 echo "Content-type: text/plain; charset=utf-8"
 echo
 
-date > /var/lib/redeploy/schedule-"${PARAMS[type]}"
+date > "/var/lib/redeploy/schedule-$TYPE"
 
-echo "Rebuild for ${PARAMS[type]} scheduled. Stand by."
+echo "Rebuild for $TYPE scheduled. Stand by."
