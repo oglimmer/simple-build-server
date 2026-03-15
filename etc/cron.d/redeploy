@@ -1,2 +1,0 @@
-* * * * * root /usr/local/bin/redeploy-engine.sh >> /var/log/redeploy.log 2>&1
-

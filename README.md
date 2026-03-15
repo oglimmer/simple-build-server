@@ -1,58 +1,66 @@
-# Simple Build System
+# Simple Build Server
+
+A lightweight, containerized build server written in Go. Triggers builds instantly via API or web dashboard.
 
 ## Installation
 
-### Create a user/password for the password secured area
+### Configure apps and credentials
 
-Run 
+Edit `config.yaml`:
 
-```bash
-htpasswd -nb oli the-very-secret-password
+```yaml
+apps:
+  my-app:
+    token: "<bcrypt hash>"  # API bearer token
+dashboard:
+  username: "admin"
+  password_hash: "<bcrypt hash>"  # dashboard login password
 ```
 
-and replace the result into [redeploy/etc/htpass-redeploy]()
+Generate bcrypt hashes with:
 
-### Define your systems and its access passwords
+```bash
+go run ./cmd/hashpassword my-secret-token
+```
 
-Edit the file [redeploy/etc/redeploy.conf]() with your systems and their rebuild passwords.
+### Define build and test scripts
 
-> Example:
->
-> If you have defined [app-b]=123 you can trigger a rebuild via:
-> http://localhost:8080/cgi-bin/redeploy/exec?authorization=123&type=app-b
->
+For each app in `config.yaml`, create a directory under `/opt/<app-name>/` with at least a `build.sh`.
 
-### Define the build and test scripts
+Optional scripts:
+- `test.sh` — run tests after a successful build
+- `get-git-url.sh` — output the source repository URL
+- `get-git-hash.sh` — output the latest commit hash
 
-For each key defined in [redeploy/etc/redeploy.conf]() you have to have corresponding directoy in `/opt` with at least a `build.sh`
-Optionally you can define `test.sh`, `get-git-hash.sh` and `get-git-url.sh`.
+See `opt/app-a/` for an example.
 
-* The `build.sh` file should execute your build.
-* The optional `test.sh`file should execute your tests.
-* The optional, but recommended `get-git-url.sh` file simply outputs your souruce repository URL.
-* The optional, but recommended `get-git-hash.sh`file outputs the last commit hash.
-
-See [opt/app-a]() for an example.
-
-## Test, run and integrate
-
-Build a docker image via:
+## Build and run
 
 ```bash
 docker build --tag redeploy .
+docker run --rm -d -p 8080:8080 --name redeploy redeploy
 ```
 
-Run it via:
+### Dashboard
+
+Open http://localhost:8080/dashboard/
+
+Default credentials: `oli` / `oli`
+
+### API
+
+Trigger a rebuild from your CI pipeline:
 
 ```bash
-docker run --rm -d -p 8080:80 --name redeploy redeploy
+curl -X POST -H "Authorization: Bearer 123" http://localhost:8080/api/rebuild/app-b
 ```
 
-Now you can access the overview page at:
+Builds start immediately (no polling delay).
 
-http://localhost:8080/cgi-bin/redeploy/secured/index
+## Architecture
 
-User: oli
-Password: oli
-
-You can either trigger a build on this page or execute [http://localhost:8080/cgi-bin/redeploy/exec?authorization=123&type=app-b]() from your build pipeline.
+- Single Go binary — no Apache, no cron, no CGI
+- Event-driven builds (instant trigger, no 60s polling)
+- Bearer token auth for API, bcrypt-hashed credentials
+- Runs as non-root user in container
+- Multi-stage Docker build (~50MB image + your build tools)

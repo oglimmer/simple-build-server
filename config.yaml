@@ -1,0 +1,18 @@
+listen: ":8080"
+state_dir: "/var/lib/redeploy"
+log_dir: "/var/log"
+apps_dir: "/opt"
+
+# API tokens (used with "Authorization: Bearer <token>" header)
+# Generate hashes with: go run ./cmd/hashpassword <token>
+apps:
+  app-a:
+    token: "$2a$10$pabAZLTiE7WpCvKAl.MXRulXtdT7D4hv/5e8yB8ayeMIMIXqgi1Zq"  # "abc"
+  app-b:
+    token: "$2a$10$SW72Dmq6ZWoJ6UEJqpnSj.AH/mYVB1YrwXmiObAOhePwevmzDfmP."  # "123"
+
+# Dashboard credentials (HTTP Basic Auth)
+# Generate hash with: go run ./cmd/hashpassword <password>
+dashboard:
+  username: "oli"
+  password_hash: "$2a$10$R9T49He9rRoK1gziIMkZEOz3stXM.nQZw0UCzz.FxCAJFRe6XfnCy"  # "oli"
